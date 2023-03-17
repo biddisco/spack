@@ -61,6 +61,7 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
     variant("fortran", default=False, description="Enable Fortran support")
     variant("mpi", default=True, description="Enable MPI support")
     variant("osmesa", default=False, description="Enable OSMesa support")
+    variant("egl", default=False, description="The OpenGL library being used supports EGL")
     variant("qt", default=False, description="Enable Qt (gui) support")
     variant("opengl2", default=True, description="Enable OpenGL2 backend")
     variant("examples", default=False, description="Build examples")
@@ -179,12 +180,17 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
 
     depends_on("gl@3.2:", when="+opengl2")
     depends_on("gl@1.2:", when="~opengl2")
-    depends_on("glew")
+    depends_on("glew",        when="~egl")
+    depends_on("glew gl=egl", when="+egl")
+
     depends_on("osmesa", when="+osmesa")
-    for p in ["linux", "cray"]:
-        depends_on("glx", when="~osmesa platform={}".format(p))
-        depends_on("libxt", when="~osmesa platform={}".format(p))
-    conflicts("+qt", when="+osmesa")
+    with when("~egl"):
+        for p in ["linux", "cray"]:
+            depends_on("glx", when="~osmesa platform={}".format(p))
+            depends_on("libxt", when="~osmesa platform={}".format(p))
+    conflicts("+qt",  when="+osmesa")
+    conflicts("+qt",  when="+egl")
+    conflicts("+egl", when="+osmesa")
 
     depends_on("bzip2")
     depends_on("double-conversion")
@@ -391,19 +397,29 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
             """Negated ternary for spec variant to OFF/ON string"""
             return variant_bool(feature, on="OFF", off="ON")
 
+        def use_X_check():
+            """Return false if osmesa or egl are requested"""
+            if "+osmesa" in spec or "+egl" in spec:
+                return "OFF"
+            return "ON"
+
+
         rendering = variant_bool("+opengl2", "OpenGL2", "OpenGL")
         includes = variant_bool("+development_files")
 
         cmake_args = [
-            "-DVTK_OPENGL_HAS_OSMESA:BOOL=%s" % variant_bool("+osmesa"),
-            "-DVTK_USE_X:BOOL=%s" % nvariant_bool("+osmesa"),
+            "-DVTK_USE_X:BOOL=%s" % use_X_check(),
             "-DPARAVIEW_INSTALL_DEVELOPMENT_FILES:BOOL=%s" % includes,
             "-DBUILD_TESTING:BOOL=OFF",
-            "-DOpenGL_GL_PREFERENCE:STRING=LEGACY",
+            "-DPARAVIEW_PLUGIN_ENABLE_pvNVIDIAIndeX:BOOL=ON",
             self.define_from_variant("PARAVIEW_ENABLE_VISITBRIDGE", "visitbridge"),
             self.define_from_variant("VISIT_BUILD_READER_Silo", "visitbridge"),
         ]
 
+        if "+osmesa" in spec:
+            cmake_args.append("-DVTK_OPENGL_HAS_OSMESA:BOOL=ON")
+        if "+egl" in spec:
+            cmake_args.append("-DVTK_OPENGL_HAS_EGL:BOOL=ON")
         if spec.satisfies("@5.11:"):
             cmake_args.append("-DVTK_MODULE_USE_EXTERNAL_VTK_verdict:BOOL=OFF")
 
@@ -427,7 +443,7 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
                         "-DPARAVIEW_BUILD_EDITION:STRING=%s"
                         % spec.variants["build_edition"].value.upper(),
                         "-DPARAVIEW_USE_QT:BOOL=%s" % variant_bool("+qt"),
-                        "-DPARAVIEW_BUILD_WITH_EXTERNAL=ON",
+                        "-DPARAVIEW_BUILD_WITH_EXTERNAL=OFF",
                     ]
                 )
                 if spec.satisfies("%cce"):
