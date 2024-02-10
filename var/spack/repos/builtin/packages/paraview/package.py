@@ -119,6 +119,7 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
         ' "default" lets the build_edition make the decision.'
         ' "on" or "off" will always override the build_edition.',
     )
+    variant("doc", default=True, description="Build documentation")
 
     conflicts("~hdf5", when="+visitbridge")
     conflicts("+adios2", when="@:5.10 ~mpi")
@@ -449,6 +450,10 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
             self.define_from_variant("PARAVIEW_ENABLE_VISITBRIDGE", "visitbridge"),
             self.define_from_variant("VISIT_BUILD_READER_Silo", "visitbridge"),
         ]
+        if "~doc" in spec:
+            cmake_args.append("-DPARAVIEW_BUILD_DEVELOPER_DOCUMENTATION:BOOL=OFF")
+            cmake_args.append("-DPARAVIEW_ENABLE_EMBEDDED_DOCUMENTATION:BOOL=OFF")
+            cmake_args.append("-DPARAVIEW_PLUGIN_DISABLE_XML_DOCUMENTATION:BOOL=ON")
 
         if "+egl" in spec:
             cmake_args.append("-DVTK_OPENGL_HAS_EGL:BOOL=ON")
