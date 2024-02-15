@@ -19,10 +19,13 @@ class Vtk(CMakePackage):
     homepage = "https://www.vtk.org"
     url = "https://www.vtk.org/files/release/9.0/VTK-9.0.0.tar.gz"
     list_url = "https://www.vtk.org/download/"
+    git = "https://gitlab.kitware.com/vtk/vtk"
 
     maintainers("chuckatkins", "danlipsa", "johnwparent")
 
     license("BSD-3-Clause")
+
+    version("master", branch="master")
 
     version(
         "9.3.1",
