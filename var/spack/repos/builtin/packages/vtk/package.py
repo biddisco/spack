@@ -11,7 +11,7 @@ from spack.package import *
 from spack.pkg.builtin.boost import Boost
 
 
-class Vtk(CMakePackage):
+class Vtk(CMakePackage, CudaPackage):
     """The Visualization Toolkit (VTK) is an open-source, freely
     available software system for 3D computer graphics, image
     processing and visualization."""
@@ -19,11 +19,13 @@ class Vtk(CMakePackage):
     homepage = "https://www.vtk.org"
     url = "https://www.vtk.org/files/release/9.0/VTK-9.0.0.tar.gz"
     list_url = "https://www.vtk.org/download/"
+    git = "https://gitlab.kitware.com/vtk/vtk"
 
     maintainers("chuckatkins", "danlipsa")
 
     license("BSD-3-Clause")
 
+    version("master", branch="master")
     version("9.2.6", sha256="06fc8d49c4e56f498c40fcb38a563ed8d4ec31358d0101e8988f0bb4d539dd12")
     version("9.2.2", sha256="1c5b0a2be71fac96ff4831af69e350f7a0ea3168981f790c000709dcf9121075")
     version("9.1.0", sha256="8fed42f4f8f1eb8083107b68eaa9ad71da07110161a3116ad807f43e5ca5ce96")
@@ -52,6 +54,7 @@ class Vtk(CMakePackage):
     # VTK7 defaults to OpenGL2 rendering backend
     variant("opengl2", default=True, description="Enable OpenGL2 backend")
     variant("osmesa", default=False, description="Enable OSMesa support")
+    variant("egl", default=False, description="Enable EGL in the OpenGL library being used")
     variant("python", default=False, description="Enable Python support", when="@8:")
     variant("qt", default=False, description="Build with support for Qt")
     variant("xdmf", default=False, description="Build XDMF file support")
@@ -76,6 +79,9 @@ class Vtk(CMakePackage):
 
     # We cannot build with both osmesa and qt in spack
     conflicts("+osmesa", when="+qt")
+    # we cannot use qt or osmesa when using egl
+    conflicts("+qt", when="+egl")
+    conflicts("+egl", when="+osmesa")
 
     conflicts("%gcc@13", when="@9.2")
 
@@ -126,12 +132,12 @@ class Vtk(CMakePackage):
     patch("vtk_proj_include_no_strict.patch", when="@9: platform=windows")
     patch("vtk_alias_hdf5.patch", when="@9: platform=windows")
     patch("vtk_findproj_config.patch", when="platform=windows")
-    with when("~osmesa"):
+    with when("~osmesa ~egl"):
         depends_on("glx", when="platform=linux")
         depends_on("glx", when="platform=cray")
         depends_on("libxt", when="platform=linux")
         depends_on("libxt", when="platform=cray")
-
+    depends_on("egl", when="+egl")
     depends_on("osmesa", when="+osmesa")
 
     # VTK will need Qt5OpenGL, and qt needs '-opengl' for that
@@ -152,7 +158,8 @@ class Vtk(CMakePackage):
     # work yet with freetype 2.10.3 (including possible patches)
     depends_on("freetype @:2.10.2", when="@:9.0.1")
     depends_on("freetype")
-    depends_on("glew")
+    depends_on("glew", when="~egl")
+    depends_on("glew gl=egl", when="+egl")
     depends_on("hdf5~mpi", when="~mpi")
     depends_on("hdf5+mpi", when="+mpi")
     depends_on("hdf5@1.8:", when="@8:9.0")
@@ -184,6 +191,7 @@ class Vtk(CMakePackage):
         depends_on("seacas+mpi", when="+mpi")
         depends_on("seacas~mpi", when="~mpi")
         depends_on("seacas@2021-05-12:")
+        depends_on("seacas~x11", when="+egl")
 
     # seacas@2023-05-30 does not provide needed SEACASIoss_INCLUDE_DIRS:
     # CMake Error at CMake/vtkModule.cmake:5552 (message):
@@ -252,6 +260,12 @@ class Vtk(CMakePackage):
             # Allow downstream codes (e.g. VisIt) to override VTK's classes
             "-DVTK_ALL_NEW_OBJECT_FACTORY:BOOL=ON",
         ]
+
+        if "+cuda" in spec:
+            cmake_args.append("-DVTK_USE_CUDA:BOOL=ON")
+
+        if "+egl" in spec:
+            cmake_args.append("-DVTK_OPENGL_HAS_EGL:BOOL=ON")
 
         # Version 8.2.1a using internal libproj/pugixml for compatability
         if spec.satisfies("@8.2.1a"):
@@ -415,11 +429,17 @@ class Vtk(CMakePackage):
 
         cmake_args.append("-DVTK_RENDERING_BACKEND:STRING=" + opengl_ver)
 
-        if "+osmesa" in spec:
+        if "+osmesa" in spec or "+egl" in spec:
             cmake_args.extend(
                 [
                     "-DVTK_USE_X:BOOL=OFF",
                     "-DVTK_USE_COCOA:BOOL=OFF",
+                ]
+            )
+            
+        if "+osmesa" in spec:
+            cmake_args.extend(
+                [
                     "-DVTK_OPENGL_HAS_OSMESA:BOOL=ON",
                 ]
             )
