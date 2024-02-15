@@ -530,6 +530,7 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
                     "-DVTK_MODULE_USE_EXTERNAL_VTK_ioss:BOOL=OFF",
                     "-DVTK_MODULE_USE_EXTERNAL_VTK_exprtk:BOOL=OFF",
                     "-DVTK_MODULE_USE_EXTERNAL_VTK_fmt:BOOL=OFF",
+                    "-DPARAVIEW_USE_EXTERNAL_VTK:BOOL=ON",
                 ]
             )
 
