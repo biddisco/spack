@@ -65,6 +65,7 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
         default=True,
         description="Install include files for Catalyst or plugins support",
     )
+    variant("vtk", default=False, description="Use external VTK", when="@master")
     variant("python", default=False, description="Enable Python support", when="@5.6:")
     variant("fortran", default=False, description="Enable Fortran support")
     variant("mpi", default=True, description="Enable MPI support")
@@ -163,6 +164,14 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("cmake@3.21:", type="build", when="+rocm")
 
     extends("python", when="+python")
+
+    with when("+vtk"):
+        depends_on("vtk@master", when="+vtk")
+        depends_on("vtk +mpi", when="+mpi")
+        depends_on("vtk +egl", when="+egl")
+        depends_on("vtk +python", when="+python")
+        depends_on("vtk +opengl2", when="+opengl2")
+        depends_on("vtk +cuda", when="+cuda")
 
     # VTK < 8.2.1 can't handle Python 3.8
     # This affects Paraview <= 5.7 (VTK 8.2.0)
@@ -491,6 +500,12 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
                 )
                 if spec.satisfies("%cce"):
                     cmake_args.append("-DVTK_PYTHON_OPTIONAL_LINK:BOOL=OFF")
+                if spec.satisfies("@5.12:"):
+                    cmake_args.extend(
+                        [
+                            "-DPARAVIEW_USE_EXTERNAL_VTK:BOOL=%s" %variant_bool("+vtk"),
+                        ]
+                    )
             else:  # @5.7:
                 cmake_args.extend(
                     [
