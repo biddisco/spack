@@ -525,9 +525,14 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
         if spec.satisfies("^[virtuals=gl] egl"):
             cmake_args.append("-DVTK_OPENGL_HAS_EGL:BOOL=ON")
 
+        print('This spec might be above 5.12')
         if spec.satisfies("@5.12:"):
             cmake_args.append("-DVTK_MODULE_USE_EXTERNAL_VTK_fast_float:BOOL=OFF")
             cmake_args.append("-DVTK_MODULE_USE_EXTERNAL_VTK_token:BOOL=OFF")
+            cmake_args.append("-DPARAVIEW_USE_EXTERNAL_VTK:BOOL=%s" %variant_bool("+vtk"))
+            print('This spec is above 5.12')
+        else:
+            print('NOoooooooooooooooooooooooooooooooooooo')
 
         if spec.satisfies("@5.11:"):
             cmake_args.append("-DVTK_MODULE_USE_EXTERNAL_VTK_verdict:BOOL=OFF")
@@ -558,12 +563,6 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
                 )
                 if spec.satisfies("%cce"):
                     cmake_args.append("-DVTK_PYTHON_OPTIONAL_LINK:BOOL=OFF")
-                if spec.satisfies("@5.12:"):
-                    cmake_args.extend(
-                        [
-                            "-DPARAVIEW_USE_EXTERNAL_VTK:BOOL=%s" %variant_bool("+vtk"),
-                        ]
-                    )
             else:  # @5.7:
                 cmake_args.extend(
                     [
