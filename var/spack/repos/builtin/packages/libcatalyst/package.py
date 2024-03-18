@@ -32,6 +32,7 @@ class Libcatalyst(CMakePackage):
     depends_on("mpi", when="+mpi")
     depends_on("conduit", when="+conduit")
     depends_on("cmake@3.26:", type="build")
+    depends_on("python", when="+python", type="build")
 
     def cmake_args(self):
         """Populate cmake arguments for libcatalyst."""
