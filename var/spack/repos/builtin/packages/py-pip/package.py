@@ -23,7 +23,7 @@ class PyPip(Package, PythonExtension):
     maintainers("adamjstewart", "pradyunsg")
 
     license("MIT")
-
+    version("24.0.0",  sha256="ba0d021a166865d2265246961bec0152ff124de910c5cc39f1156ce3fa7c69dc", url="https://files.pythonhosted.org/packages/8a/6a/19e9fe04fca059ccf770861c7d5721ab4c2aebc539889e97c7977528a53b/pip-24.0-py3-none-any.whl")
     version("23.1.2", sha256="3ef6ac33239e4027d9a5598a381b9d30880a1477e50039db2eac6e8a8f6d1b18")
     version("23.0", sha256="b5f88adff801f5ef052bcdef3daa31b55eb67b0fccd6d0106c206fa248e0463c")
     version("22.2.2", sha256="b61a374b5bc40a6e982426aede40c9b5a08ff20e640f5b56977f4f91fed1e39a")
