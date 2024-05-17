@@ -31,6 +31,7 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     url = "https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.0.tar.bz2"
     list_url = "https://www.open-mpi.org/software/ompi/"
     git = "https://github.com/open-mpi/ompi.git"
+    git = "https://github.com/biddisco/ompi"
 
     maintainers("hppritcha", "naughtont3")
 
@@ -40,7 +41,7 @@ class Openmpi(AutotoolsPackage, CudaPackage):
 
     license("custom")
 
-    version("main", branch="main", submodules=True)
+    version("main", branch="mpi-continue-master", submodules=True) 
 
     # Current
     version(
@@ -562,6 +563,7 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     depends_on("automake @1.13.4:", type="build", when="@5.0.0:,main")
     depends_on("libtool @2.4.2:", type="build", when="@5.0.0:,main")
     depends_on("m4", type="build", when="@5.0.0:,main")
+    depends_on("flex", type="build", when="@5.0.0:,main")
     
     depends_on("perl", type="build")
     depends_on("pkgconfig", type="build")
