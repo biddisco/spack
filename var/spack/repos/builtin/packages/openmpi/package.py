@@ -561,7 +561,8 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     depends_on("autoconf @2.69:", type="build", when="@5.0.0:,main")
     depends_on("automake @1.13.4:", type="build", when="@5.0.0:,main")
     depends_on("libtool @2.4.2:", type="build", when="@5.0.0:,main")
-
+    depends_on("m4", type="build", when="@5.0.0:,main")
+    
     depends_on("perl", type="build")
     depends_on("pkgconfig", type="build")
 
@@ -845,6 +846,8 @@ class Openmpi(AutotoolsPackage, CudaPackage):
         env.set("MPIF90", join_path(self.prefix.bin, "mpif90"))
 
     def setup_dependent_build_environment(self, env, dependent_spec):
+        self.setup_run_environment(env)
+
         # Use the spack compiler wrappers under MPI
         env.set("OMPI_CC", spack_cc)
         env.set("OMPI_CXX", spack_cxx)
