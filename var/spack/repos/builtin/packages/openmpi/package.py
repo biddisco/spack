@@ -548,6 +548,7 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     variant("internal-pmix", default=False, description="Use internal pmix")
     variant("internal-libevent", default=False, description="Use internal libevent")
     variant("openshmem", default=False, description="Enable building OpenSHMEM")
+    variant("continuations", default=False, description="Enable continuations extension")
 
     provides("mpi")
     provides("mpi@:2.2", when="@1.6.5")
@@ -1080,6 +1081,10 @@ class Openmpi(AutotoolsPackage, CudaPackage):
         config_args.extend(
             self.enable_or_disable("mpi-thread-multiple", variant="thread_multiple")
         )
+
+        # extensions
+        if "+continuations" in spec:
+            config_args.append("--enable-mpi-ext=continue")
 
         # CUDA support
         # See https://www.open-mpi.org/faq/?category=buildcuda
