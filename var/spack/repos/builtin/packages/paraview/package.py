@@ -183,6 +183,8 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
         "75": "turing",
         "80": "ampere",
         "86": "ampere",
+        "89": "ampere",
+        "90": "hopper",
     }
 
     # VTK-m and transitively ParaView does not support Tesla Arch
@@ -214,7 +216,6 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
     with when("+vtk"):
         depends_on("vtk@master", when="+vtk")
         depends_on("vtk +mpi", when="+mpi")
-        depends_on("vtk +egl", when="+egl")
         depends_on("vtk +python", when="+python")
         depends_on("vtk +opengl2", when="+opengl2")
         depends_on("vtk +cuda", when="+cuda")
