@@ -27,12 +27,28 @@ class Stdexec(CMakePackage):
     conflicts("%gcc@:10")
     conflicts("%clang@:12")
 
+    cxxstds = ("17", "20", "23")
+    variant(
+        "cxxstd",
+        default="17",
+        values=cxxstds,
+        description="Use the specified C++ standard when building",
+    )
+
+    variant("examples", default=False, description="Build and install examples")
+
     @when("@:23.03")
     def build(self, spec, prefix):
         pass
 
     def cmake_args(self):
-        return [
-            self.define("STDEXEC_BUILD_TESTS", self.run_tests),
-            self.define("STDEXEC_BUILD_EXAMPLES", False),
+        spec, args = self.spec, []
+
+        args += [
+            self.define("CMAKE_CXX_STANDARD", spec.variants["cxxstd"].value),
+            self.define("STDEXEC_BUILD_TESTS", "self.run_tests"),
+            self.define_from_variant("STDEXEC_BUILD_EXAMPLES", "examples"),
         ]
+
+        return args
+
