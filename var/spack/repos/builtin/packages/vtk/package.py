@@ -11,7 +11,7 @@ from spack.package import *
 from spack.pkg.builtin.boost import Boost
 
 
-class Vtk(CMakePackage):
+class Vtk(CMakePackage, CudaPackage):
     """The Visualization Toolkit (VTK) is an open-source, freely
     available software system for 3D computer graphics, image
     processing and visualization."""
@@ -279,6 +279,9 @@ class Vtk(CMakePackage):
             # Allow downstream codes (e.g. VisIt) to override VTK's classes
             "-DVTK_ALL_NEW_OBJECT_FACTORY:BOOL=ON",
         ]
+
+        if "+cuda" in spec:
+            cmake_args.append("-DVTK_USE_CUDA:BOOL=ON")
 
         # Version 8.2.1a using internal libproj/pugixml for compatability
         if spec.satisfies("@8.2.1a"):
