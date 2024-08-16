@@ -203,6 +203,7 @@ class Vtk(CMakePackage, CudaPackage):
         depends_on("seacas+mpi", when="+mpi")
         depends_on("seacas~mpi", when="~mpi")
         depends_on("seacas@2021-05-12:")
+        depends_on("seacas~x11", when="^[virtuals=gl] egl")
 
     # seacas@2023-05-30 does not provide needed SEACASIoss_INCLUDE_DIRS:
     # CMake Error at CMake/vtkModule.cmake:5552 (message):
