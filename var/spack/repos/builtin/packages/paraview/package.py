@@ -74,7 +74,7 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
         default=True,
         description="Install include files for Catalyst or plugins support",
     )
-    variant("vtk", default=False, description="Use external VTK", when="@master")
+    variant("vtk", default=False, description="Use external VTK", when="@5.12:")
     variant("python", default=False, description="Enable Python support", when="@5.6:")
     variant("fortran", default=False, description="Enable Fortran support")
     variant("mpi", default=True, description="Enable MPI support")
