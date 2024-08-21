@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 
+import os
 import re
 
 from spack.package import *
@@ -75,6 +76,18 @@ class Ispc(CMakePackage):
     )
 
     patch(
+        "find-tbb.patch",
+        when="@1.23:",
+        sha256="ecd3ea5dfbcaa3d7cbef8058356be53fa08deabdb93287c3645586082f5c4f43",
+    )
+
+#    patch(
+#        "fix-threads.patch",
+#        when="@1.23:",
+#        sha256="bda71577627f2202efd15b9768c564079a36808d3f3def48af8380ec91adfb91",
+#    )
+
+    patch(
         "fix-linking-against-llvm-10.patch",
         when="@1.13.0:1.13",
         sha256="d3ccf547d3ba59779fd375e10417a436318f2200d160febb9f830a26f0daefdc",
@@ -108,7 +121,10 @@ class Ispc(CMakePackage):
 
     def cmake_args(self):
         spec = self.spec
+        os.environ["TBB_ROOT"] = spec["tbb"].prefix
         args = []
+        args.append("-DTBB_ROOT={0}".format(spec["tbb"].prefix))
+        args.append("-DCMAKE_EXE_LINKER_FLAGS=-ltinfo -lz")
         args.append("-DISPC_NO_DUMPS=ON")  # otherwise, LLVM needs patching
         args.append("-DCURSES_NEED_NCURSES=TRUE")
         args.append("-DISPC_INCLUDE_EXAMPLES=OFF")
