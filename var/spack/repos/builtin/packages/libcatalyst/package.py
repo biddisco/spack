@@ -41,6 +41,8 @@ class Libcatalyst(CMakePackage):
     depends_on("python@3:", when="+python")
     depends_on("py-numpy", when="+python", type=("build", "link", "run"))
 
+    patch('conduit_is_external.patch')
+
     def cmake_args(self):
         """Populate cmake arguments for libcatalyst."""
         args = [
