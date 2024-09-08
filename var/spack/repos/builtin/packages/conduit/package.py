@@ -87,6 +87,7 @@ class Conduit(CMakePackage):
     variant("shared", default=True, description="Build Conduit as shared libs")
     variant("test", default=True, description="Enable Conduit unit tests")
     variant("utilities", default=True, description="Build Conduit utilities")
+    variant("web", default=True, description="Build Conduit web relay support")
 
     # variants for python support
     variant("python", default=False, description="Build Conduit Python support")
@@ -447,6 +448,11 @@ class Conduit(CMakePackage):
             cfg.write(cmake_cache_entry("ENABLE_UTILS", "ON"))
         else:
             cfg.write(cmake_cache_entry("ENABLE_UTILS", "OFF"))
+
+        if spec.satisfies("+web"):
+            cfg.write(cmake_cache_entry("ENABLE_RELAY_WEBSERVER", "ON"))
+        else:
+            cfg.write(cmake_cache_entry("ENABLE_RELAY_WEBSERVER", "OFF"))
 
         #######################
         # Unit Tests
