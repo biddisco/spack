@@ -6,7 +6,7 @@
 from spack.package import *
 
 
-class H5hut(AutotoolsPackage):
+class H5hut(AutotoolsPackage, CMakePackage):
     """H5hut (HDF5 Utility Toolkit).
     High-Performance I/O Library for Particle-based Simulations."""
 
@@ -23,8 +23,17 @@ class H5hut(AutotoolsPackage):
     depends_on("cxx", type="build")  # generated
     depends_on("fortran", type="build")  # generated
 
+    build_system(
+        conditional("cmake", when="@2:"),
+        "autotools",
+        default="autotools",
+    )
+    generator("ninja", "make")
+    conflicts("generator=ninja", when="build_system=autotools")
+
     variant("fortran", default=True, description="Enable Fortran support")
     variant("mpi", default=True, description="Enable MPI support")
+    variant("shared", default=True, description="Build shared libraries")
 
     depends_on("autoconf", type="build", when="build_system=autotools")
     depends_on("automake", type="build", when="build_system=autotools")
@@ -34,6 +43,7 @@ class H5hut(AutotoolsPackage):
     # h5hut +mpi uses the obsolete function H5Pset_fapl_mpiposix:
     depends_on("hdf5@1.8:+mpi", when="+mpi")
     depends_on("hdf5@1.8:", when="~mpi")
+    depends_on("hdf5@1.12:", type="build", when="build_system=cmake")
 
     # If built in parallel, the following error message occurs:
     # install: .libs/libH5hut.a: No such file or directory
@@ -77,5 +87,21 @@ class H5hut(AutotoolsPackage):
 
             if spec.satisfies("+fortran"):
                 config_args.append("FC={0}".format(spec["mpi"].mpifc))
+        if "+shared" in spec:
+            config_args.append("--enable-shared")
+        config_args.append("--disable-examples")
 
         return config_args
+
+    def cmake_args(self):
+        spec, args = self.spec, []
+
+        args += [
+            self.define_from_variant("BUILD_SHARED_LIBS", "shared"),
+            self.define_from_variant("H5HUT_WITH_FORTRAN", "fortran"),
+            self.define_from_variant("H5HUT_WITH_MPI", "mpi"),
+            self.define("HDF5_ROOT", spec["hdf5"].prefix),
+        ]
+
+        return args
+
