@@ -20,7 +20,8 @@ class Libcxi(AutotoolsPackage):
     variant("oneapi", default=False, description="Build with OneAPI Level Zero support")
     variant("cuda", default=False, description="Build with CUDA support")
     variant("rocm", default=False, description="Build with ROCm support")
-
+    variant("fuse3", default=False, description="Use fuse3 instead of fuse2 - EXPERIMENTAL")
+    
     depends_on("c", type="build")
 
     depends_on("cassini-headers")
@@ -28,7 +29,8 @@ class Libcxi(AutotoolsPackage):
 
     depends_on("libconfig@1.5:")
     depends_on("libuv@1.18:")
-    depends_on("libfuse@2.9.7:2")  # configure fails with newer, bug?
+    depends_on("libfuse@:2.9.9", when="~fuse3")
+    depends_on("libfuse@3:", when="+fuse3")
     depends_on("libyaml@0.1.7:")
     depends_on("libnl@3:")
     depends_on("numactl@2:")
@@ -37,6 +39,9 @@ class Libcxi(AutotoolsPackage):
     depends_on("oneapi-level-zero", when="+oneapi")
     depends_on("cuda", when="+cuda")
     depends_on("hip", when="+rocm")
+
+    # Use fuse3 in configure check
+    patch("fuse3-version.patch", when="@main +fuse3")
 
     def patch(self):
         filter_file(
