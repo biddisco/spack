@@ -229,6 +229,13 @@ class Libfabric(AutotoolsPackage, CudaPackage):
         if self.spec.satisfies("+cuda"):
             args.append(f"--with-cuda={self.spec['cuda'].prefix}")
 
+        if self.spec.satisfies("fabrics=cxi"):
+            args.append(f"--with-json-c={self.spec['json-c'].prefix}")
+            args.append(f"--with-curl={self.spec['curl'].prefix}")
+            args.append(f"--with-cassini-headers={self.spec['cassini-headers'].prefix.include}")
+            args.append(f"--with-cxi-uapi-headers={self.spec['cxi-driver'].prefix.include}")
+            args.append(f"--enable-cxi={self.spec['libcxi'].prefix}")
+
         return args
 
     def installcheck(self):
