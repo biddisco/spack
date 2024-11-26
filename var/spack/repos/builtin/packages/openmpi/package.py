@@ -33,6 +33,7 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     url = "https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.0.tar.bz2"
     list_url = "https://www.open-mpi.org/software/ompi/"
     git = "https://github.com/open-mpi/ompi.git"
+    git = "https://github.com/biddisco/ompi"
 
     maintainers("hppritcha", "naughtont3")
 
@@ -42,7 +43,8 @@ class Openmpi(AutotoolsPackage, CudaPackage):
 
     license("custom")
 
-    version("main", branch="main", submodules=True)
+    version("main", branch="mpi-continue-5.0.6", submodules=True) 
+    #version("main", branch="main", submodules=True) 
 
     # Current
     version(
@@ -567,7 +569,7 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     variant(
         "legacylaunchers",
         default=False,
-        when="@1.6:4 schedulers=slurm",
+        when="schedulers=slurm",
         description="Do not remove mpirun/mpiexec when building with slurm",
     )
     # Variants to use internal packages
@@ -575,6 +577,7 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     variant("internal-pmix", default=False, description="Use internal pmix")
     variant("internal-libevent", default=False, description="Use internal libevent")
     variant("openshmem", default=False, description="Enable building OpenSHMEM")
+    variant("continuations", default=False, description="Enable continuations extension")
     variant("debug", default=False, description="Make debug build", when="build_system=autotools")
 
     variant(
@@ -610,6 +613,7 @@ with '-Wl,-commons,use_dylibs' and without
 
     depends_on("perl", type="build")
     depends_on("pkgconfig", type="build")
+    depends_on("flex", type="build", when="@main")
 
     depends_on("hwloc@2:", when="@4: ~internal-hwloc")
     # ompi@:3.0.0 doesn't support newer hwloc releases:
@@ -1075,7 +1079,8 @@ with '-Wl,-commons,use_dylibs' and without
 
         if spec.satisfies("@2.0.0:"):
             if "fabrics=xpmem" in spec:
-                config_args.append("--with-cray-xpmem")
+                config_args.append(f'--with-cray-xpmem={self.spec["xpmem"].prefix}')
+
             else:
                 config_args.append("--without-cray-xpmem")
 
@@ -1098,6 +1103,7 @@ with '-Wl,-commons,use_dylibs' and without
         # PMIx support
         if spec.satisfies("+internal-pmix"):
             config_args.append("--with-pmix=internal")
+            config_args.append("--enable-prte-prefix-by-default")
         elif "^pmix" in spec:
             config_args.append("--with-pmix={0}".format(spec["pmix"].prefix))
 
@@ -1143,6 +1149,10 @@ with '-Wl,-commons,use_dylibs' and without
         config_args.extend(
             self.enable_or_disable("mpi-thread-multiple", variant="thread_multiple")
         )
+
+        # extensions
+        if "+continuations" in spec:
+            config_args.append("--enable-mpi-ext=continue")
 
         # CUDA support
         # See https://www.open-mpi.org/faq/?category=buildcuda
