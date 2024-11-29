@@ -21,7 +21,8 @@ class Libcxi(AutotoolsPackage):
     variant("cuda", default=False, description="Build with CUDA support")
     variant("rocm", default=False, description="Build with ROCm support")
     variant("fuse3", default=False, description="Use fuse3 instead of fuse2 - EXPERIMENTAL")
-    
+    variant("debug", default=False, description="Enable debug build")
+
     depends_on("c", type="build")
 
     depends_on("cassini-headers")
@@ -64,6 +65,8 @@ class Libcxi(AutotoolsPackage):
             f"--with-udevrulesdir={self.prefix}/lib/udev/rules.d",
             f"--with-systemdsystemunitdir={self.prefix}/lib/systemd/system",
         ]
+
+        args.extend(self.enable_or_disable("debug"))
 
         if self.spec.satisfies("+oneapi"):
             args.append(f"--with-ze={self.spec['oneapi-level-zero'].prefix}")
