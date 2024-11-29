@@ -94,7 +94,12 @@ class Libfuse(MesonPackage):
         sha256="94d5c6d9785471147506851b023cb111ef2081d1c0e695728037bbf4f64ce30a",
         when="@:2",
     )
-    patch("int64type.patch", when="@2.9.9")    
+    # fixed in v3.x, but some packages still require v2.x
+    patch(
+        "fix_aarch64_compile.patch",
+        sha256="3f5be04cde2b8cf4744e802c3d878c39d3bfef354b78220a8b099cfbd6abdb63",
+        when="@:2 target=aarch64:",
+    )
 
     executables = ["^fusermount3?$"]
 
