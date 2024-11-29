@@ -129,6 +129,7 @@ class Libfabric(AutotoolsPackage, CudaPackage):
     depends_on("liburing@2.1:", when="+uring")
     depends_on("oneapi-level-zero", when="+level_zero")
     depends_on("libcxi", when="fabrics=cxi")
+    depends_on("libcxi +debug", when="fabrics=cxi +debug")
 
     depends_on("m4", when="@main", type="build")
     depends_on("autoconf", when="@main", type="build")

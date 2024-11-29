@@ -21,6 +21,7 @@ class Libcxi(AutotoolsPackage):
     variant("level_zero", default=False, description="Enable level zero support")
     variant("cuda", default=False, description="Build with CUDA support")
     variant("rocm", default=False, description="Build with ROCm support")
+    variant("debug", default=False, description="Enable debug build")
 
     depends_on("c", type="build")
 
@@ -63,6 +64,8 @@ class Libcxi(AutotoolsPackage):
             f"--with-udevrulesdir={self.prefix}/lib/udev/rules.d",
             f"--with-systemdsystemunitdir={self.prefix}/lib/systemd/system",
         ]
+
+        args.extend(self.enable_or_disable("debug"))
 
         if self.spec.satisfies("+level_zero"):
             args.append(f"--with-ze={self.spec['oneapi-level-zero'].prefix}")
