@@ -222,6 +222,10 @@ class Libfabric(AutotoolsPackage, CudaPackage):
             args.append(f"--with-cassini-headers={self.spec['cassini-headers'].prefix.include}")
             args.append(f"--with-cxi-uapi-headers={self.spec['cxi-driver'].prefix.include}")
             args.append(f"--enable-cxi={self.spec['libcxi'].prefix}")
+            if self.spec.satisfies("+cuda "):
+                args.append(f"--enable-cuda-dlopen")
+                args.append(f"--enable-gdrcopy-dlopen")
+
 
         return args
 
