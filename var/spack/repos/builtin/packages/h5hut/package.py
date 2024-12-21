@@ -58,8 +58,8 @@ class H5hut(AutotoolsPackage, CMakePackage):
 
     def flag_handler(self, name, flags):
         build_system_flags = []
-        if name == "cflags" and self.spec["hdf5"].satisfies("@1.12:"):
-            build_system_flags = ["-DH5_USE_110_API"]
+        if name == "cflags" and self.spec.satisfies("@:2") and self.spec["hdf5"].satisfies("@1.12:"):
+          build_system_flags = ["-DH5_USE_110_API"]
         return flags, None, build_system_flags
 
     def autoreconf(self, spec, prefix):
@@ -85,6 +85,7 @@ class H5hut(AutotoolsPackage, CMakePackage):
                 config_args.append("FC={0}".format(spec["mpi"].mpifc))
         if "+shared" in spec:
             config_args.append("--enable-shared")
+        config_args.append("--disable-examples")
 
         return config_args
 
