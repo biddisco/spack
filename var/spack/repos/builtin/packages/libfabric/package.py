@@ -70,6 +70,7 @@ class Libfabric(AutotoolsPackage, CudaPackage):
         "cxi",
         "efa",
         "gni",
+        "lnx",
         "mlx",
         "mrail",
         "opx",
@@ -205,6 +206,9 @@ class Libfabric(AutotoolsPackage, CudaPackage):
                 args.append(f"--enable-{fabric}")
             else:
                 args.append(f"--disable-{fabric}")
+
+        if self.spec.satisfies("fabrics=lnx"):
+            args.append(f"--enable-lnx")
 
         if self.spec.satisfies("fabrics=cxi"):
             args.append(f"--with-json-c={self.spec['json-c'].prefix}")
