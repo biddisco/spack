@@ -137,6 +137,8 @@ class Libfabric(AutotoolsPackage, CudaPackage):
     depends_on("json-c", when="fabrics=cxi")
     depends_on("curl", when="fabrics=cxi")
 
+    depends_on("gdrcopy", when="fabrics=lnx")
+
     conflicts("@1.9.0", when="platform=darwin", msg="This distribution is missing critical files")
     conflicts("fabrics=opx", when="@:1.14.99")
     conflicts(
@@ -208,7 +210,8 @@ class Libfabric(AutotoolsPackage, CudaPackage):
                 args.append(f"--disable-{fabric}")
 
         if self.spec.satisfies("fabrics=lnx"):
-            args.append(f"--enable-lnx")
+            args.append(f"--enable-lnx=yes")
+            args.append(f"--with-gdrcopy={self.spec['gdrcopy'].prefix}")
 
         if self.spec.satisfies("fabrics=cxi"):
             args.append(f"--with-json-c={self.spec['json-c'].prefix}")
