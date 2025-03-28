@@ -213,7 +213,7 @@ class Libfabric(AutotoolsPackage, CudaPackage):
 
         if self.spec.satisfies("fabrics=lnx"):
             args.append(f"--enable-lnx=yes")
-            args.append(f"--with-gdrcopy={self.spec['gdrcopy'].prefix}")
+#            args.append(f"--with-gdrcopy={self.spec['gdrcopy'].prefix}")
 
         if self.spec.satisfies("fabrics=cxi"):
             args.append(f"--with-json-c={self.spec['json-c'].prefix}")
