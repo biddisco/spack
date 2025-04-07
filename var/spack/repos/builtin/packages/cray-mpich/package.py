@@ -1,110 +1,237 @@
-# Copyright Spack Project Developers. See COPYRIGHT file for details.
+# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other
+# Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import os
+import platform
 
-import llnl.util.tty as tty
-
+import spack.compilers
 from spack.package import *
-from spack.pkg.builtin.mpich import MpichEnvironmentModifications
-from spack.util.module_cmd import get_path_args_from_module_line, module
+
+_versions = {
+    "9.0.0": {
+        "Linux-aarch64": "d3f91487b00d4d9b4edd129b9b12e702c6cec4ce7f0e886e2e6e489846bb0928",
+        "Linux-x86_64": "962aaebea6b234a369e376ee986d0a3f5142fc4a66ac8bbee863053f89b42c55",
+    },
+    "8.1.32": {
+        "Linux-aarch64": "64ac7a1cf1850a13aaf9b7a080cf955e71ee8388a35d08d283fb4850b6a9ebc3",
+        "Linux-x86_64": "ce8d8d544f99c97079c04981675a7ca0f53d9b69a482eb7bb1dc09af32cd2313",
+    },
+    "8.1.30": {
+        "Linux-aarch64": "18f0b403c7ce586926c3f6f7a64e412889f59f596145e17edbe8778a245372a6",
+        "Linux-x86_64": "c16b2b113a4af1d10eccc2ba1d1316571baf331ab3904f1fca8d6a767c22720b",
+    },
+    "8.1.29": {
+        "Linux-aarch64": "2fc5d1f5743f9cecc0b5dbf13355c25014f96db2386b5c2c2d8495a57b279381",
+    },
+    "8.1.28": {
+        "Linux-aarch64": "dfd6c685adfbf070fe9d546d95b31e108ee7089a738447fa7326973a3e696e8d",
+        "Linux-x86_64": "55a0a068bd8bff14f302c5371d7e2b4cf732d5c1ec875bb03e375644e1a6beab",
+    },
+    "8.1.27": {
+        "Linux-x86_64": "5d59cc69b7ae2ef692ae49843bb2c7a44b5a8478d72eaf2ab1f1f6c5983eee0b"
+    },
+    "8.1.26": {
+        "Linux-x86_64": "d308cf3e254ce5873af6caee5ec683a397fed5ce92975f57e5c9215a98d8edad"
+    },
+    "8.1.25": {
+        "Linux-x86_64": "024ab0c4526670a37df7e2995172ba264454fd69c05d8ffe140c9e519397a65c"
+    },
+    "8.1.24": {
+        "Linux-x86_64": "2c3fa339511ed822892e112d3e4d5a39a634d00a31cf22e02ce843f0efcc5ae8"
+    },
+    "8.1.23": {
+        "Linux-x86_64": "ed7ff286ede30ea96dede4c53aa2ef98e8090c988a0bea764cd505ba5fcc0520"
+    },
+    "8.1.21": {
+        "Linux-x86_64": "5fda115f356c26e5d9f8cc68fe578e954a70edd10ebf007182d945345886b61a"
+    },
+    "8.1.18": {
+        "Linux-x86_64": "f7feafd204502d0dab449ff22da138c933ec22d7de3d5e30fbb9a62fc9cdf237"
+    },
+}
 
 
-class CrayMpich(MpichEnvironmentModifications, Package, CudaPackage, ROCmPackage):
-    """Cray's MPICH is a high performance and widely portable implementation of
-    the Message Passing Interface (MPI) standard."""
+class CrayMpich(Package):
+    """Install cray-mpich as a binary package"""
 
-    homepage = "https://docs.nersc.gov/development/compilers/wrappers/"
-    has_code = False  # Skip attempts to fetch source that is not available
+    """Intended to override the main cray-mpich"""
 
-    maintainers("etiennemlb", "haampie")
+    homepage = "https://www.hpe.com/us/en/compute/hpc/hpc-software.html"
+    url = "https://jfrog.svc.cscs.ch/artifactory/cray-mpich/cray-mpich-8.1.26.tar.gz"
+    maintainers = ["bcumming"]
+    for ver, packages in _versions.items():
+        key = "{0}-{1}".format(platform.system(), platform.machine())
+        sha = packages.get(key)
+        if sha:
+            version(
+                ver,
+                sha256=sha,
+                preferred=(ver == "8.1.32"),
+                url=f"https://jfrog.svc.cscs.ch/artifactory/cray-mpich/cray-mpich-{ver}.{platform.machine()}.tar.gz",
+            )
 
-    version("8.1.30")
-    version("8.1.28")
-    version("8.1.25")
-    version("8.1.24")
-    version("8.1.21")
-    version("8.1.14")
-    version("8.1.7")
-    version("8.1.0")
-    version("8.0.16")
-    version("8.0.14")
-    version("8.0.11")
-    version("8.0.9")
-    version("7.7.16")
-    version("7.7.15")
-    version("7.7.14")
-    version("7.7.13")
+    variant("cuda", default=False)
+    variant("rocm", default=False)
+    variant("cxi",  default=False)
 
-    depends_on("cray-pmi")
-    depends_on("libfabric")
+    requires(
+        "%gcc",
+        "%nvhpc",
+        policy="one_of",
+        msg="GCC and NVHPC are the only supported compilers by the CSCS packaged version.",
+    )
 
-    requires("platform=linux", msg="Cray MPICH is only available on Cray")
+    conflicts("+cuda", when="+rocm", msg="Pick either CUDA or ROCM")
 
-    # cray-mpich 8.1.7: features MPI compiler wrappers
-    variant("wrappers", default=True, when="@8.1.7:", description="enable MPI wrappers")
+    provides("mpi")
 
-    provides("mpi@3")
+    # Fix up binaries with patchelf.
+    depends_on("patchelf", type="build")
 
-    canonical_names = {
-        "gcc": "GNU",
-        "cce": "CRAY",
-        "intel": "INTEL",
-        "clang": "ALLINEA",
-        "aocc": "AOCC",
-    }
+    for ver in [
+        "8.1.18",
+        "8.1.21",
+        "8.1.23",
+        "8.1.24",
+        "8.1.25",
+        "8.1.26",
+        "8.1.27",
+        "8.1.28",
+        "8.1.29",
+        "8.1.30",
+        "8.1.32",
+        "9.0.0",
+    ]:
+        with when("+cuda"):
+            depends_on(f"cray-gtl@{ver} +cuda", type="link", when="@" + ver)
+        with when("+rocm"):
+            depends_on(f"cray-gtl@{ver} +rocm", type="link", when="@" + ver)
 
-    @property
-    def modname(self):
-        return "cray-mpich/{0}".format(self.version)
+    # here we put a hard rule to say, use 1.15 when not asking for any new cxi stuff,
+    # but also this forces spack to tuen on +cxi when we supply a newer libfabric.
+    # We could use depends_on("libfabric@1.15:" if we want to allow new libfabric versions
+    # but using the old cxi, however, for now I prefeer this.
+    depends_on("libfabric@1.15", type="link", when="~cxi")
 
-    @property
-    def external_prefix(self):
-        mpich_module = module("show", self.modname).splitlines()
+    # @TODO, pick versions we can reproduce reliably once we are happy with the builds
+    with when("+cxi"):
+        depends_on("libfabric@1.22: fabrics=cxi,rxm,tcp")
+        depends_on("libcxi")
+        depends_on("cxi-driver")
+        depends_on("cassini-headers")
 
-        for line in mpich_module:
-            if "CRAY_MPICH_DIR" in line:
-                return get_path_args_from_module_line(line)[0]
+    depends_on("cray-pmi", type="link")
+    depends_on("xpmem", type="link")
 
-        # Fixes an issue on Archer2 cray-mpich/8.0.16 where there is
-        # no CRAY_MPICH_DIR variable in the module file.
-        for line in mpich_module:
-            if "CRAY_LD_LIBRARY_PATH" in line:
-                libdir = get_path_args_from_module_line(line)[0]
-                return os.path.dirname(os.path.normpath(libdir))
+    conflicts("%gcc@:7")
+    conflicts("%gcc@:11", when="@8.1.28:")
 
     def setup_run_environment(self, env):
-        if self.spec.satisfies("+wrappers"):
-            self.setup_mpi_wrapper_variables(env)
-            return
+        env.set("MPICC", join_path(self.prefix.bin, "mpicc"))
+        env.set("MPICXX", join_path(self.prefix.bin, "mpic++"))
+        env.set("MPIF77", join_path(self.prefix.bin, "mpif77"))
+        env.set("MPIF90", join_path(self.prefix.bin, "mpif90"))
 
-        env.set("MPICC", self.compiler.cc)
-        env.set("MPICXX", self.compiler.cxx)
-        env.set("MPIFC", self.compiler.fc)
-        env.set("MPIF77", self.compiler.f77)
+    def setup_dependent_build_environment(self, env, dependent_spec):
+        self.setup_run_environment(env)
+        env.set("MPICH_CC", dependent_spec.package.module.spack_cc)
+        env.set("MPICH_CXX", dependent_spec.package.module.spack_cxx)
+        env.set("MPICH_FC", dependent_spec.package.module.spack_fc)
 
     def setup_dependent_package(self, module, dependent_spec):
-        spec = self.spec
-        if spec.satisfies("+wrappers"):
-            MpichEnvironmentModifications.setup_dependent_package(self, module, dependent_spec)
-        elif spack_cc is not None:
-            spec.mpicc = spack_cc
-            spec.mpicxx = spack_cxx
-            spec.mpifc = spack_fc
-            spec.mpif77 = spack_f77
+        self.spec.mpicc = join_path(self.prefix.bin, "mpicc")
+        self.spec.mpicxx = join_path(self.prefix.bin, "mpic++")
+        self.spec.mpifc = join_path(self.prefix.bin, "mpif90")
+        self.spec.mpif77 = join_path(self.prefix.bin, "mpif77")
+
+    def get_rpaths(self):
+        # Those rpaths are already set in the build environment, so
+        # let's just retrieve them.
+        pkgs = os.getenv("SPACK_RPATH_DIRS", "").split(":")
+        pkgs_store = os.getenv("SPACK_STORE_RPATH_DIRS", "").split(":")
+        compilers = os.getenv("SPACK_COMPILER_IMPLICIT_RPATHS", "").split(":")
+        return ":".join([p for p in pkgs + compilers + pkgs_store if p])
+
+    def should_patch(self, file):
+        # Returns true if non-symlink ELF file.
+        if os.path.islink(file):
+            return False
+        try:
+            with open(file, "rb") as f:
+                return f.read(4) == b"\x7fELF"
+        except OSError:
+            return False
 
     def install(self, spec, prefix):
-        raise InstallError(
-            self.spec.format(
-                "{name} is not installable, you need to specify "
-                "it as an external package in packages.yaml"
-            )
+        if "%nvhpc" in self.spec:
+            install_tree("mpich-nvhpc", prefix)
+        elif "%gcc" in self.spec:
+            install_tree("mpich-gcc", prefix)
+
+    @run_after("install")
+    def fixup_binaries(self):
+        patchelf = which("patchelf")
+        rpath = self.get_rpaths()
+        for root, _, files in os.walk(self.prefix):
+            for name in files:
+                f = os.path.join(root, name)
+                if not self.should_patch(f):
+                    continue
+                patchelf("--force-rpath", "--set-rpath", rpath, f, fail_on_error=False)
+                patchelf("--add-needed", "libxpmem.so", f, fail_on_error=False)
+                if "+cuda" in self.spec:
+                    patchelf(
+                        "--add-needed", "libmpi_gtl_cuda.so", f, fail_on_error=False
+                    )
+                if "+rocm" in self.spec:
+                    patchelf(
+                        "--add-needed", "libmpi_gtl_hsa.so", f, fail_on_error=False
+                    )
+
+    @run_after("install")
+    def fixup_compiler_paths(self):
+        filter_file("@@CC@@", self.compiler.cc, self.prefix.bin.mpicc, string=True)
+        filter_file("@@CXX@@", self.compiler.cxx, self.prefix.bin.mpicxx, string=True)
+        filter_file("@@FC@@", self.compiler.fc, self.prefix.bin.mpifort, string=True)
+
+        filter_file("@@PREFIX@@", self.prefix, self.prefix.bin.mpicc, string=True)
+        filter_file("@@PREFIX@@", self.prefix, self.prefix.bin.mpicxx, string=True)
+        filter_file("@@PREFIX@@", self.prefix, self.prefix.bin.mpifort, string=True)
+
+        # link with the relevant gtl lib
+        if "+cuda" in self.spec:
+            lpath = self.spec["cray-gtl"].prefix.lib
+            gtl_library = f"-L{lpath} -Wl,-rpath,{lpath} -lmpi_gtl_cuda"
+        elif "+rocm" in self.spec:
+            lpath = self.spec["cray-gtl"].prefix.lib
+            gtl_library = f"-L{lpath} -Wl,-rpath,{lpath}  -lmpi_gtl_hsa"
+        else:
+            gtl_library = ""
+        print("==== GTL_LIBRARY", gtl_library)
+        filter_file("@@GTL_LIBRARY@@", gtl_library, self.prefix.bin.mpicc, string=True)
+        filter_file("@@GTL_LIBRARY@@", gtl_library, self.prefix.bin.mpicxx, string=True)
+        filter_file(
+            "@@GTL_LIBRARY@@", gtl_library, self.prefix.bin.mpifort, string=True
         )
+
+    @run_after("install")
+    def fixup_pkgconfig(self):
+        for root, _, files in os.walk(self.prefix):
+            for name in files:
+                if name[-3:] == ".pc":
+                    f = os.path.join(root, name)
+                    filter_file("@@PREFIX@@", self.prefix, f, string=True)
 
     @property
     def headers(self):
         hdrs = find_headers("mpi", self.prefix.include, recursive=True)
+        hdrs += find_headers(
+            "cray_version", self.prefix.include, recursive=True
+        )  # cray_version.h
+        # cray-mpich depends on cray-pmi
+        # hdrs += find_headers("pmi", self.prefix.include, recursive=True) # See cray-pmi package
         hdrs.directories = os.path.dirname(hdrs[0])
         return hdrs
 
@@ -112,10 +239,7 @@ class CrayMpich(MpichEnvironmentModifications, Package, CudaPackage, ROCmPackage
     def libs(self):
         query_parameters = self.spec.last_query.extra_parameters
 
-        libraries = ["libmpich"]
-
-        if "cxx" in query_parameters:
-            libraries.extend(["libmpicxx", "libmpichcxx"])
+        libraries = ["libmpi", "libmpich"]
 
         if "f77" in query_parameters:
             libraries.extend(["libmpifort", "libmpichfort", "libfmpi", "libfmpich"])
@@ -123,90 +247,12 @@ class CrayMpich(MpichEnvironmentModifications, Package, CudaPackage, ROCmPackage
         if "f90" in query_parameters:
             libraries.extend(["libmpif90", "libmpichf90"])
 
-        libs = find_libraries(libraries, root=self.prefix.lib, recursive=True)
-        libs += find_libraries(libraries, root=self.prefix.lib64, recursive=True)
+        libs = []
+        for lib_folder in [self.prefix.lib, self.prefix.lib64]:
+            libs += find_libraries(libraries, root=lib_folder, recursive=True)
+            # cray-mpich depends on cray-pmi
+            # libs += find_libraries("libpmi", root=lib_folder, recursive=True)
+            libs += find_libraries("libopa", root=lib_folder, recursive=True)
+            libs += find_libraries("libmpl", root=lib_folder, recursive=True)
 
         return libs
-
-    @property
-    def gtl_lib(self):
-        # GPU transport Layer (GTL) handling background:
-        # - The cray-mpich module defines an environment variable per supported
-        # GPU (say, PE_MPICH_GTL_LIBS_amd_gfx942). So we should read the
-        # appropriate variable.
-        # In practice loading a module and checking its content is a PITA. We
-        # simplify by assuming that the GTL for a given vendor (say, AMD), is
-        # one and the same for all the targets of this vendor (one GTL for all
-        # Nvidia or one GTL for all AMD devices).
-        # - Second, except if you have a very weird mpich layout, the GTL are
-        # located in /opt/cray/pe/mpich/<cray_mpich_version>/gtl/lib when the
-        # MPI libraries are in
-        # /opt/cray/pe/mpich/<cray_mpich_version>/ofi/<vendor>/<vendor_version>.
-        # Example:
-        #   /opt/cray/pe/mpich/8.1.28/gtl/lib
-        #   /opt/cray/pe/mpich/8.1.28/ofi/<vendor>/<vendor_version>
-        #   /opt/cray/pe/mpich/8.1.28/ofi/<vendor>/<vendor_version>/../../../gtl/lib
-
-        gtl_kinds = {
-            "cuda": {
-                "lib": "libmpi_gtl_cuda",
-                "variant": "cuda_arch",
-                "values": {"70", "80", "90"},
-            },
-            "rocm": {
-                "lib": "libmpi_gtl_hsa",
-                "variant": "amdgpu_target",
-                "values": {"gfx906", "gfx908", "gfx90a", "gfx940", "gfx942"},
-            },
-        }
-
-        for variant, gtl_kind in gtl_kinds.items():
-            arch_variant = gtl_kind["variant"]
-            arch_values = gtl_kind["values"]
-            gtl_lib = gtl_kind["lib"]
-
-            if self.spec.satisfies(f"+{variant} {arch_variant}=*"):
-                accelerator_architecture_set = set(self.spec.variants[arch_variant].value)
-
-                if len(
-                    accelerator_architecture_set
-                ) >= 1 and not accelerator_architecture_set.issubset(arch_values):
-                    raise InstallError(
-                        f"cray-mpich variant '+{variant} {arch_variant}'"
-                        " was specified but no GTL support could be found for it."
-                    )
-
-                mpi_root = os.path.abspath(
-                    os.path.join(self.prefix, os.pardir, os.pardir, os.pardir)
-                )
-
-                gtl_root = os.path.join(mpi_root, "gtl", "lib")
-
-                gtl_shared_libraries = find_libraries(
-                    [gtl_lib], root=gtl_root, shared=True, recursive=False
-                )
-
-                if len(gtl_shared_libraries) != 1:
-                    raise InstallError(
-                        f"cray-mpich variant '+{variant} {arch_variant}'"
-                        " was specified and GTL support was found for it but"
-                        f" the '{gtl_lib}' could not be correctly found on disk."
-                    )
-
-                gtl_library_fullpath = list(gtl_shared_libraries)[0]
-                tty.debug(f"Selected GTL: {gtl_library_fullpath}")
-
-                gtl_library_directory = os.path.dirname(gtl_library_fullpath)
-                gtl_library_name = os.path.splitext(
-                    os.path.basename(gtl_library_fullpath).split("lib")[1]
-                )[0]
-
-                # Early break. Only one GTL can be active at a given time.
-                return {
-                    "ldflags": [
-                        f"-L{gtl_library_directory}",
-                        f"-Wl,-rpath,{gtl_library_directory}",
-                    ],
-                    "ldlibs": [f"-l{gtl_library_name}"],
-                }
-        return {}
