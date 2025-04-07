@@ -1,16 +1,13 @@
-# Copyright 2013-2024 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 
-import itertools
 import os
 import re
 import sys
 
-import llnl.util.tty as tty
-
+import spack.compilers
 from spack.package import *
 
 
@@ -31,6 +28,7 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     url = "https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.0.tar.bz2"
     list_url = "https://www.open-mpi.org/software/ompi/"
     git = "https://github.com/open-mpi/ompi.git"
+    cxxname = "mpic++"
 
     maintainers("hppritcha", "naughtont3")
 
@@ -44,10 +42,16 @@ class Openmpi(AutotoolsPackage, CudaPackage):
 
     # Current
     version(
-        "5.0.5", sha256="6588d57c0a4bd299a24103f4e196051b29e8b55fbda49e11d5b3d32030a32776"
-    )  # libmpi.so.40.40.5
+        "5.0.7", sha256="119f2009936a403334d0df3c0d74d5595a32d99497f9b1d41e90019fee2fc2dd"
+    )  # libmpi.so.40.40.7
 
     # Still supported
+    version(
+        "5.0.6", sha256="bd4183fcbc43477c254799b429df1a6e576c042e74a2d2f8b37d537b2ff98157"
+    )  # libmpi.so.40.40.6
+    version(
+        "5.0.5", sha256="6588d57c0a4bd299a24103f4e196051b29e8b55fbda49e11d5b3d32030a32776"
+    )  # libmpi.so.40.40.5
     version(
         "5.0.4", sha256="64526852cdd88b2d30e022087c16ab3e03806c451b10cd691d5c1ac887d8ef9d"
     )  # libmpi.so.40.40.4
@@ -63,6 +67,9 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     version(
         "5.0.0", sha256="9d845ca94bc1aeb445f83d98d238cd08f6ec7ad0f73b0f79ec1668dbfdacd613"
     )  # libmpi.so.40.40.0
+    version(
+        "4.1.8", sha256="466f68e3132a1dc02710cc2011fafced8336d98359fa2dae4dddcfd5719f12a9"
+    )  # libmpi.so.40.30.8
     version(
         "4.1.7", sha256="54a33cb7ad81ff0976f15a6cc8003c3922f0f3d8ceed14e1813ef3603f22cd34"
     )  # libmpi.so.40.30.7
@@ -397,9 +404,9 @@ class Openmpi(AutotoolsPackage, CudaPackage):
         "1.0", sha256="cf75e56852caebe90231d295806ac3441f37dc6d9ad17b1381791ebb78e21564"
     )  # libmpi.so.0.0.0
 
-    depends_on("c", type="build")  # generated
-    depends_on("cxx", type="build")  # generated
-    depends_on("fortran", type="build")  # generated
+    depends_on("c", type="build")
+    depends_on("cxx", type="build")
+    depends_on("fortran", type="build")
 
     patch("ad_lustre_rwcontig_open_source.patch", when="@1.6.5")
     patch("llnl-platforms.patch", when="@1.6.5")
@@ -549,6 +556,7 @@ class Openmpi(AutotoolsPackage, CudaPackage):
         when="@1.3:4",
         description="Prefix Open MPI to PATH and LD_LIBRARY_PATH on local and remote hosts",
     )
+    variant("ipv6", default=False, when="@4:", description="Enable IPv6 support")
     # Adding support to build a debug version of OpenMPI that activates
     # Memchecker, as described here:
     #
@@ -584,6 +592,10 @@ with '-Wl,-commons,use_dylibs' and without
 '-Wl,-flat_namespace'.""",
     )
 
+    variant("cray-xpmem", default=False, description="use cray-xpmem instead of xpmem configure flag (if fabrics=xpmem enabled)")
+
+    variant("continuations", default=False, description="Enable continuations extension")
+
     # Patch to allow two-level namespace on a MacOS platform when building
     # openmpi. Unfortuntately, the openmpi configure command has flat namespace
     # hardwired in. In spack, this only works for openmpi up to versions 4,
@@ -608,6 +620,7 @@ with '-Wl,-commons,use_dylibs' and without
 
     depends_on("perl", type="build")
     depends_on("pkgconfig", type="build")
+    depends_on("flex", type="build", when="@main")
 
     depends_on("hwloc@2:", when="@4: ~internal-hwloc")
     # ompi@:3.0.0 doesn't support newer hwloc releases:
@@ -732,7 +745,7 @@ with '-Wl,-commons,use_dylibs' and without
                 variants.append("+atomics")
 
             # java
-            if version in spack.version.ver("1.7.4:"):
+            if version in ver("1.7.4:"):
                 match = re.search(r"\bJava bindings: (\S+)", output)
                 if match and is_enabled(match.group(1)):
                     variants.append("+java")
@@ -750,7 +763,7 @@ with '-Wl,-commons,use_dylibs' and without
                 variants.append("~static")
 
             # sqlite
-            if version in spack.version.ver("1.7.3:1"):
+            if version in ver("1.7.3:1"):
                 if re.search(r"\bMCA db: sqlite", output):
                     variants.append("+sqlite3")
                 else:
@@ -761,7 +774,7 @@ with '-Wl,-commons,use_dylibs' and without
                 variants.append("+vt")
 
             # thread_multiple
-            if version in spack.version.ver("1.5.4:2"):
+            if version in ver("1.5.4:2"):
                 match = re.search(r"MPI_THREAD_MULTIPLE: (\S+?),?", output)
                 if match and is_enabled(match.group(1)):
                     variants.append("+thread_multiple")
@@ -778,7 +791,7 @@ with '-Wl,-commons,use_dylibs' and without
                 variants.append("~cuda")
 
             # wrapper-rpath
-            if version in spack.version.ver("1.7.4:"):
+            if version in ver("1.7.4:"):
                 match = re.search(r"\bWrapper compiler rpath: (\S+)", output)
                 if match and is_enabled(match.group(1)):
                     variants.append("+wrapper-rpath")
@@ -786,7 +799,7 @@ with '-Wl,-commons,use_dylibs' and without
                     variants.append("~wrapper-rpath")
 
             # cxx
-            if version in spack.version.ver(":4"):
+            if version in ver(":4"):
                 match = re.search(r"\bC\+\+ bindings: (\S+)", output)
                 if match and match.group(1) == "yes":
                     variants.append("+cxx")
@@ -794,7 +807,7 @@ with '-Wl,-commons,use_dylibs' and without
                     variants.append("~cxx")
 
             # cxx_exceptions
-            if version in spack.version.ver(":4"):
+            if version in ver(":4"):
                 match = re.search(r"\bC\+\+ exceptions: (\S+)", output)
                 if match and match.group(1) == "yes":
                     variants.append("+cxx_exceptions")
@@ -802,7 +815,7 @@ with '-Wl,-commons,use_dylibs' and without
                     variants.append("~cxx_exceptions")
 
             # singularity
-            if version in spack.version.ver(":4"):
+            if version in ver(":4"):
                 if re.search(r"--with-singularity", output):
                     variants.append("+singularity")
 
@@ -818,7 +831,7 @@ with '-Wl,-commons,use_dylibs' and without
                 variants.append("~memchecker")
 
             # pmi
-            if version in spack.version.ver("1.5.5:4"):
+            if version in ver("1.5.5:4"):
                 if re.search(r"\bMCA (?:ess|prrte): pmi", output):
                     variants.append("+pmi")
                 else:
@@ -881,7 +894,7 @@ with '-Wl,-commons,use_dylibs' and without
         # Because MPI is both a runtime and a compiler, we have to setup the
         # compiler components as part of the run environment.
         env.set("MPICC", join_path(self.prefix.bin, "mpicc"))
-        env.set("MPICXX", join_path(self.prefix.bin, "mpic++"))
+        env.set("MPICXX", join_path(self.prefix.bin, self.cxxname))
         env.set("MPIF77", join_path(self.prefix.bin, "mpif77"))
         env.set("MPIF90", join_path(self.prefix.bin, "mpif90"))
         # Open MPI also has had mpifort since v1.7, so we can set MPIFC to that
@@ -894,10 +907,14 @@ with '-Wl,-commons,use_dylibs' and without
     def setup_dependent_build_environment(self, env, dependent_spec):
         # Use the spack compiler wrappers under MPI
         dependent_module = dependent_spec.package.module
-        env.set("OMPI_CC", dependent_module.spack_cc)
-        env.set("OMPI_CXX", dependent_module.spack_cxx)
-        env.set("OMPI_FC", dependent_module.spack_fc)
-        env.set("OMPI_F77", dependent_module.spack_f77)
+        for var_name, attr_name in (
+            ("OMPI_CC", "spack_cc"),
+            ("OMPI_CXX", "spack_cxx"),
+            ("OMPI_FC", "spack_fc"),
+            ("OMPI_F77", "spack_f77"),
+        ):
+            if hasattr(dependent_module, attr_name):
+                env.set(var_name, getattr(dependent_module, attr_name))
 
         # See https://www.open-mpi.org/faq/?category=building#installdirs
         for suffix in [
@@ -923,13 +940,9 @@ with '-Wl,-commons,use_dylibs' and without
 
     def setup_dependent_package(self, module, dependent_spec):
         self.spec.mpicc = join_path(self.prefix.bin, "mpicc")
-        self.spec.mpicxx = join_path(self.prefix.bin, "mpic++")
+        self.spec.mpicxx = join_path(self.prefix.bin, self.cxxname)
         self.spec.mpifc = join_path(self.prefix.bin, "mpif90")
         self.spec.mpif77 = join_path(self.prefix.bin, "mpif77")
-        self.spec.mpicxx_shared_libs = [
-            join_path(self.prefix.lib, "libmpi_cxx.{0}".format(dso_suffix)),
-            join_path(self.prefix.lib, "libmpi.{0}".format(dso_suffix)),
-        ]
 
     # Most of the following with_or_without methods might seem redundant
     # because Spack compiler wrapper adds the required -I and -L flags, which
@@ -971,37 +984,40 @@ with '-Wl,-commons,use_dylibs' and without
     def with_or_without_fca(self, activated):
         if not activated:
             return "--without-fca"
-        return "--with-fca={0}".format(self.spec["fca"].prefix)
+        return f"--with-fca={self.spec['fca'].prefix}"
 
     def with_or_without_hcoll(self, activated):
         if not activated:
             return "--without-hcoll"
-        return "--with-hcoll={0}".format(self.spec["hcoll"].prefix)
+        return f"--with-hcoll={self.spec['hcoll'].prefix}"
 
     def with_or_without_ucc(self, activated):
         if not activated:
             return "--without-ucc"
-        return "--with-ucc={0}".format(self.spec["ucc"].prefix)
+        return f"--with-ucc={self.spec['ucc'].prefix}"
 
     def with_or_without_xpmem(self, activated):
+        s1 = "xpmem"
+        if self.spec.satisfies("+cray-xpmem"):
+            s1 = "cray-xpmem"
         if not activated:
-            return "--without-xpmem"
-        return "--with-xpmem={0}".format(self.spec["xpmem"].prefix)
+            return f"--without-{s1}"
+        return f"--with-{s1}={self.spec['xpmem'].prefix}"
 
     def with_or_without_knem(self, activated):
         if not activated:
             return "--without-knem"
-        return "--with-knem={0}".format(self.spec["knem"].prefix)
+        return f"--with-knem={self.spec['knem'].prefix}"
 
     def with_or_without_lsf(self, activated):
         if not activated:
             return "--without-lsf"
-        return "--with-lsf={0}".format(self.spec["lsf"].prefix)
+        return f"--with-lsf={self.spec['lsf'].prefix}"
 
     def with_or_without_tm(self, activated):
         if not activated:
             return "--without-tm"
-        return "--with-tm={0}".format(self.spec["pbs"].prefix)
+        return f"--with-tm={self.spec['pbs'].prefix}"
 
     @run_before("autoreconf")
     def die_without_fortran(self):
@@ -1034,11 +1050,6 @@ with '-Wl,-commons,use_dylibs' and without
         if spec.satisfies("@:4.1.6,5.0.0:5.0.3 %apple-clang@15:"):
             config_args.append("--with-wrapper-fcflags=-Wl,-ld_classic")
 
-        # All rpath flags should be appended with self.compiler.cc_rpath_arg.
-        # Later, we might need to update share/openmpi/mpic++-wrapper-data.txt
-        # and mpifort-wrapper-data.txt (see filter_rpaths()).
-        wrapper_ldflags = []
-
         config_args.extend(self.enable_or_disable("builtin-atomics", variant="atomics"))
 
         if spec.satisfies("+pmi"):
@@ -1061,6 +1072,10 @@ with '-Wl,-commons,use_dylibs' and without
         if spec.satisfies("+orterunprefix"):
             config_args.append("--enable-orterun-prefix-by-default")
 
+        # Enable IPv6 support
+        if spec.satisfies("+ipv6"):
+            config_args.append("--enable-ipv6")
+
         # some scientific packages ignore deprecated/remove symbols. Re-enable
         # them for now, for discussion see
         # https://github.com/open-mpi/ompi/issues/6114#issuecomment-446279495
@@ -1072,10 +1087,7 @@ with '-Wl,-commons,use_dylibs' and without
             config_args.extend(self.with_or_without("fabrics"))
 
         if spec.satisfies("@2.0.0:"):
-            if "fabrics=xpmem" in spec:
-                config_args.append("--with-cray-xpmem")
-            else:
-                config_args.append("--without-cray-xpmem")
+            config_args.append(self.with_or_without_xpmem("fabrics=xpmem" in spec))
 
         # Schedulers
         if "schedulers=auto" not in spec:
@@ -1142,6 +1154,10 @@ with '-Wl,-commons,use_dylibs' and without
             self.enable_or_disable("mpi-thread-multiple", variant="thread_multiple")
         )
 
+        # extensions
+        if "+continuations" in spec:
+            config_args.append("--enable-mpi-ext=continue")
+
         # CUDA support
         # See https://www.open-mpi.org/faq/?category=buildcuda
         if "+cuda" in spec:
@@ -1162,13 +1178,6 @@ with '-Wl,-commons,use_dylibs' and without
             if spec.satisfies("@1.7.2"):
                 # There was a bug in 1.7.2 when --enable-static is used
                 config_args.append("--enable-mca-no-build=pml-bfo")
-            if spec.satisfies("%pgi^cuda@7.0:7"):
-                # OpenMPI has problems with CUDA 7 and PGI
-                config_args.append("--with-wrapper-cflags=-D__LP64__ -ta:tesla")
-                if spec.satisfies("%pgi@:15.8"):
-                    # With PGI 15.9 and later compilers, the
-                    # CFLAGS=-D__LP64__ is no longer needed.
-                    config_args.append("CFLAGS=-D__LP64__")
         elif spec.satisfies("@1.7:"):
             config_args.append("--without-cuda")
 
@@ -1188,25 +1197,12 @@ with '-Wl,-commons,use_dylibs' and without
             # filter_pc_files()):
             if spec.satisfies("@3.0.5:"):
                 config_args.append("--disable-wrapper-runpath")
-
-            # Add extra_rpaths and implicit_rpaths into the wrappers.
-            wrapper_ldflags.extend(
-                [
-                    self.compiler.cc_rpath_arg + path
-                    for path in itertools.chain(
-                        self.compiler.extra_rpaths, self.compiler.implicit_rpaths()
-                    )
-                ]
-            )
         else:
             config_args.append("--disable-wrapper-rpath")
             config_args.append("--disable-wrapper-runpath")
 
         config_args.extend(self.enable_or_disable("mpi-cxx", variant="cxx"))
         config_args.extend(self.enable_or_disable("cxx-exceptions", variant="cxx_exceptions"))
-
-        if wrapper_ldflags:
-            config_args.append("--with-wrapper-ldflags={0}".format(" ".join(wrapper_ldflags)))
 
         #
         # the Spack path padding feature causes issues with Open MPI's lex based parsing system
@@ -1245,53 +1241,6 @@ with '-Wl,-commons,use_dylibs' and without
         config_args += self.enable_or_disable("debug")
 
         return config_args
-
-    @run_after("install", when="+wrapper-rpath")
-    def filter_rpaths(self):
-        def filter_lang_rpaths(lang_tokens, rpath_arg):
-            if self.compiler.cc_rpath_arg == rpath_arg:
-                return
-
-            files = find(
-                self.spec.prefix.share.openmpi,
-                ["*{0}-wrapper-data*".format(t) for t in lang_tokens],
-            )
-            files.extend(
-                find(
-                    self.spec.prefix.lib.pkgconfig, ["ompi-{0}.pc".format(t) for t in lang_tokens]
-                )
-            )
-
-            x = FileFilter(*[f for f in files if not os.path.islink(f)])
-
-            # Replace self.compiler.cc_rpath_arg, which have been added as
-            # '--with-wrapper-ldflags', with rpath_arg in the respective
-            # language-specific wrappers and pkg-config files.
-            x.filter(self.compiler.cc_rpath_arg, rpath_arg, string=True, backup=False)
-
-            if self.spec.satisfies("@:1.10.3,2:2.1.1"):
-                # Replace Libtool-style RPATH prefixes '-Wl,-rpath -Wl,' with
-                # rpath_arg for old version of OpenMPI, which assumed that CXX
-                # and FC had the same prefixes as CC.
-                x.filter("-Wl,-rpath -Wl,", rpath_arg, string=True, backup=False)
-
-        filter_lang_rpaths(["c++", "CC", "cxx"], self.compiler.cxx_rpath_arg)
-        filter_lang_rpaths(["fort", "f77", "f90"], self.compiler.fc_rpath_arg)
-
-    @run_after("install", when="@:3.0.4+wrapper-rpath")
-    def filter_pc_files(self):
-        files = find(self.spec.prefix.lib.pkgconfig, "*.pc")
-        x = FileFilter(*[f for f in files if not os.path.islink(f)])
-
-        # Remove this linking flag if present (it turns RPATH into RUNPATH)
-        x.filter(
-            "{0}--enable-new-dtags".format(self.compiler.linker_arg), "", string=True, backup=False
-        )
-
-        # NAG compiler is usually mixed with GCC, which has a different
-        # prefix for linker arguments.
-        if self.compiler.name == "nag":
-            x.filter("-Wl,--enable-new-dtags", "", string=True, backup=False)
 
     # For v4 and lower
     @run_after("install")
@@ -1423,7 +1372,7 @@ with '-Wl,-commons,use_dylibs' and without
 
 
 def get_spack_compiler_spec(compiler):
-    spack_compilers = spack.compilers.find_compilers([os.path.dirname(compiler)])
+    spack_compilers = spack.compilers.config.find_compilers([os.path.dirname(compiler)])
     actual_compiler = None
     # check if the compiler actually matches the one we want
     for spack_compiler in spack_compilers:
