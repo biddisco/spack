@@ -623,7 +623,7 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
                     [
                         "-DMPI_CXX_COMPILER:PATH=%s" % spec["mpi"].mpicxx,
                         "-DMPI_C_COMPILER:PATH=%s" % spec["mpi"].mpicc,
-                        "-DMPI_Fortran_COMPILER:PATH=%s" % spec["mpi"].mpifc,
+#                        "-DMPI_Fortran_COMPILER:PATH=%s" % spec["mpi"].mpifc,
                     ]
                 )
             cmake_args.extend(mpi_args)

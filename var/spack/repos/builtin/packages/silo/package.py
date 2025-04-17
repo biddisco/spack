@@ -63,6 +63,7 @@ class Silo(AutotoolsPackage):
     variant("hdf5", default=True, description="Support HDF5 for database I/O")
     variant("hzip", default=True, description="Enable hzip support")
     variant("fpzip", default=True, description="Enable fpzip support")
+    variant("debug", default=False, description="Enable debugging")
 
     depends_on("python", type=("build", "link"), when="+python")
     depends_on("perl", type="build")
@@ -210,6 +211,7 @@ class Silo(AutotoolsPackage):
         spec = self.spec
         config_args = ["--enable-install-lite-headers"]
 
+        config_args.extend(self.enable_or_disable("debug"))
         config_args.extend(self.enable_or_disable("pythonmodule", variant="python"))
         config_args.extend(self.enable_or_disable("fortran"))
         config_args.extend(self.enable_or_disable("silex"))
@@ -244,7 +246,7 @@ class Silo(AutotoolsPackage):
         if "+mpi" in spec:
             config_args.append("CC=%s" % spec["mpi"].mpicc)
             config_args.append("CXX=%s" % spec["mpi"].mpicxx)
-            config_args.append("FC=%s" % spec["mpi"].mpifc)
+#            config_args.append("FC=%s" % spec["mpi"].mpifc)
 
         return config_args
 
